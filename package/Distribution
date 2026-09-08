@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Squirrel-@VERSION@</title>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <pkg-ref id="im.rime.inputmethod.Squirrel"/>
+    <pkg-ref id="im.rime.inputmethod.Squirrel.uninstaller"/>
+    <options customize="allow" hostArchitectures="arm64,x86_64" require-scripts="false" rootVolumeOnly="true"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="im.rime.inputmethod.Squirrel"/>
+            <line choice="im.rime.inputmethod.Squirrel.uninstaller"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="im.rime.inputmethod.Squirrel" title="Squirrel 输入法" selection="required">
+        <pkg-ref id="im.rime.inputmethod.Squirrel"/>
+    </choice>
+    <choice id="im.rime.inputmethod.Squirrel.uninstaller" title="卸载器（建议保留）" description="在 /Applications 安装 Squirrel-Uninstaller.app，以后双击即可卸载" defaultState="on">
+        <pkg-ref id="im.rime.inputmethod.Squirrel.uninstaller"/>
+    </choice>
+    <pkg-ref id="im.rime.inputmethod.Squirrel" onConclusion="RequireLogout">Squirrel-component.pkg</pkg-ref>
+    <pkg-ref id="im.rime.inputmethod.Squirrel.uninstaller">Squirrel-Uninstaller-component.pkg</pkg-ref>
+</installer-gui-script>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>macOS 原生语音输入法开发文档 v1.1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: #f6f8fa;
+            color: #24292e;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 45px 50px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 2.2em;
+            border-bottom: 3px solid #d0d7de;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: #111;
+        }
+        h2 {
+            font-size: 1.7em;
+            margin-top: 40px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e1e4e8;
+            padding-bottom: 8px;
+        }
+        h3 {
+            font-size: 1.3em;
+            margin-top: 30px;
+            margin-bottom: 12px;
+        }
+        h4 {
+            font-size: 1.1em;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+        p, li {
+            margin-bottom: 12px;
+            color: #2c3e50;
+        }
+        ul, ol {
+            padding-left: 28px;
+            margin-bottom: 16px;
+        }
+        blockquote {
+            border-left: 5px solid #0969da;
+            background-color: #f0f6ff;
+            padding: 12px 20px;
+            margin: 16px 0;
+            border-radius: 6px;
+            color: #1a2b3c;
+        }
+        blockquote p {
+            margin-bottom: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0 24px;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #d0d7de;
+            padding: 10px 14px;
+            text-align: left;
+        }
+        th {
+            background-color: #f1f3f5;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        code {
+            font-family: "SF Mono", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+            font-size: 0.87em;
+            background-color: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #d73a49;
+        }
+        pre {
+            background-color: #f6f8fa;
+            border-radius: 8px;
+            padding: 18px 20px;
+            overflow-x: auto;
+            font-family: "SF Mono", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+            font-size: 0.88em;
+            line-height: 1.5;
+            margin: 16px 0 20px;
+            border: 1px solid #e1e4e8;
+            color: #24292e;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: #24292e;
+            font-size: inherit;
+        }
+        .architecture {
+            background-color: #f6f8fa;
+            border-radius: 8px;
+            padding: 20px 24px;
+            border: 1px solid #e1e4e8;
+            font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 16px 0 20px;
+            color: #1e293b;
+        }
+        .badge {
+            display: inline-block;
+            background-color: #0969da;
+            color: white;
+            font-size: 0.75em;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .footnote {
+            font-size: 0.9em;
+            color: #57606a;
+            border-top: 1px solid #d0d7de;
+            margin-top: 40px;
+            padding-top: 20px;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #e1e4e8;
+            margin: 40px 0;
+        }
+        @media (max-width: 640px) {
+            .container { padding: 20px 16px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.4em; }
+            pre, .architecture { font-size: 0.78em; padding: 12px; }
+            table { font-size: 0.85em; }
+            th, td { padding: 6px 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>🍎 macOS 原生语音输入法开发文档</h1>
+    <p><strong>文档版本</strong>：1.1 &nbsp;|&nbsp; <strong>目标平台</strong>：macOS 26 (Tahoe) 及以上，Apple Silicon (M1+) &nbsp;|&nbsp; <strong>开发语言</strong>：Swift 6 &nbsp;|&nbsp; <strong>依赖方式</strong>：Swift Package Manager (SPM) + 系统原生框架</p>
+
+    <h2>1. 项目概述</h2>
+    <p>本项目旨在为 macOS 输入法（如开源的 <code>InputMethodKit</code> 方案）增加<strong>本地语音输入功能</strong>，完全离线，保护隐私。核心能力包括：</p>
+    <ul>
+        <li>实时语音转文字（边说边显）</li>
+        <li>基于声纹的说话人过滤（只转写“我”的声音，忽略他人）</li>
+        <li>本地大语言模型（LLM）后处理（自动添加标点、去除口语词、润色语句）</li>
+        <li>全局热键唤出录音</li>
+        <li><strong>语音模块与输入法主程序解耦</strong>，通过回调将最终文本传给输入法引擎，由输入法负责文字上屏</li>
+    </ul>
+    <p>所有功能均使用 <strong>Apple 原生 API</strong> 和 <strong>开源 Swift 库</strong> 实现，无需额外后端进程，直接集成到输入法主程序中。</p>
+
+    <h2>2. 系统要求</h2>
+    <table>
+        <thead><tr><th>项目</th><th>要求</th></tr></thead>
+        <tbody>
+            <tr><td>操作系统</td><td>macOS 26 (Tahoe) 或更新版本</td></tr>
+            <tr><td>硬件</td><td>Apple Silicon (M1 / M2 / M3 / M4)</td></tr>
+            <tr><td>Xcode</td><td>16.0 或更新</td></tr>
+            <tr><td>Swift</td><td>6.0 或更新</td></tr>
+            <tr><td>权限</td><td>麦克风、语音识别、辅助功能（仅用于全局热键）</td></tr>
+        </tbody>
+    </table>
+
+    <h2>3. 技术架构</h2>
+    <p>采用 <strong>三阶段并行流水线</strong> 架构，所有处理均在设备端完成。</p>
+    <div class="architecture">
+麦克风 (AVCaptureSession)
+        │
+        ▼
+   ┌────┴────┐
+   │ 音频分流 │
+   └────┬────┘
+        │
+   ┌────┴──────────────────────────────┐
+   │                                   │
+   ▼                                   ▼
+SpeechAnalyzer                  FluidAudio 缓冲区
+(实时流式转录)                  (累积 16kHz Float32 样本)
+   │                                   │
+   ▼                                   ▼
+带时间戳的文字片段              录音结束后执行
+(每段含 audioTimeRange)       performCompleteDiarization()
+   │                                   │
+   └──────────────┬────────────────────┘
+                  ▼
+           时间戳对齐匹配
+      (按 audioTimeRange 重叠度分配说话人)
+                  ▼
+           仅保留“我”的文本
+                  ▼
+       FoundationModels 后处理
+      (添加标点/去除口语词/润色)
+                  ▼
+       回调传给输入法主控制器
+      (由输入法负责最终上屏)
+    </div>
+
+    <h2>4. 核心模块实现</h2>
+
+    <h3>4.1 音频捕获</h3>
+    <p><strong>推荐方案</strong>：<code>AVCaptureSession</code>（而非 <code>AVAudioEngine.installTap</code>）</p>
+    <blockquote><strong>踩坑提醒</strong>：<code>AVAudioEngine.installTap</code> 在蓝牙麦克风设备上可能不会触发回调，而 <code>AVCaptureSession</code> 在所有音频设备上均稳定工作。</blockquote>
+    <pre><code>import AVFoundation
+
+class AudioCaptureManager {
+    private let captureSession = AVCaptureSession()
+    private let audioQueue = DispatchQueue(label: "audio.capture.queue")
+    
+    func startCapture() throws {
+        captureSession.beginConfiguration()
+        guard let audioDevice = AVCaptureDevice.default(for: .audio) else {
+            throw NSError(domain: "Audio", code: -1, userInfo: [NSLocalizedDescriptionKey: "No microphone found"])
+        }
+        let audioInput = try AVCaptureDeviceInput(device: audioDevice)
+        if captureSession.canAddInput(audioInput) {
+            captureSession.addInput(audioInput)
+        }
+        captureSession.commitConfiguration()
+        captureSession.startRunning()
+    }
+    
+    // 在 AVCaptureAudioDataOutput 的 delegate 中获取音频样本
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // 分流：一路给 SpeechAnalyzer，一路累积给 FluidAudio
+    }
+}</code></pre>
+
+    <h3>4.2 实时语音转文字（SpeechAnalyzer）</h3>
+    <p><code>SpeechAnalyzer</code> 是 macOS 26 引入的原生 API，替代旧版 <code>SFSpeechRecognizer</code>，支持流式输出和时间戳。</p>
+    <pre><code>import Speech
+
+class SpeechTranscriber {
+    private var analyzer: SpeechAnalyzer?
+    private var inputBuilder: AsyncStream&lt;AnalyzerInput&gt;.Continuation?
+    private var inputSequence: AsyncStream&lt;AnalyzerInput&gt;?
+    
+    func start() async throws {
+        let transcriber = SpeechTranscriber(
+            locale: Locale(identifier: "zh-CN"),
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults, .alternativeTranscriptions],
+            attributeOptions: [.audioTimeRange, .transcriptionConfidence]
+        )
+        analyzer = SpeechAnalyzer(modules: [transcriber])
+        let (stream, continuation) = AsyncStream&lt;AnalyzerInput&gt;.makeStream()
+        inputSequence = stream
+        inputBuilder = continuation
+        try await analyzer?.start(inputSequence: stream)
+        
+        Task {
+            for try await result in analyzer!.results {
+                // result.isFinal 为 true 表示最终结果，否则为实时部分结果
+                // result.text 转写文字
+                // result.audioTimeRange 时间戳
+                handleTranscription(result)
+            }
+        }
+    }
+    
+    func feedAudio(_ sampleBuffer: CMSampleBuffer) {
+        let input = AnalyzerInput(sampleBuffer: sampleBuffer)
+        inputBuilder?.yield(input)
+    }
+}</code></pre>
+
+    <h3>4.3 说话人分离与声纹识别（FluidAudio）</h3>
+    <p><code>FluidAudio</code> 是一个开源的 Swift SDK，基于 CoreML，提供离线的说话人分离、声纹提取和识别功能。</p>
+    <p><strong>安装</strong>：</p>
+    <pre><code>// Package.swift
+dependencies: [
+    .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.0.3")
+]</code></pre>
+    <p><strong>使用示例</strong>：</p>
+    <pre><code>import FluidAudio
+
+class SpeakerDiarizer {
+    private let diarizer = DiarizerManager()
+    private var accumulatedSamples: [Float] = []
+    
+    func initialize() async throws {
+        try await diarizer.initialize() // 首次运行会下载约 700MB 模型
+    }
+    
+    func accumulateAudio(sampleBuffer: CMSampleBuffer) {
+        let floatSamples = convertCMSampleBufferToFloat32(sampleBuffer) // 需实现转换
+        accumulatedSamples.append(contentsOf: floatSamples)
+    }
+    
+    func finishAndDiarize() async throws -> [SpeakerSegment] {
+        let segments = try await diarizer.performCompleteDiarization(
+            audioSamples: accumulatedSamples,
+            sampleRate: 16000
+        )
+        return segments
+    }
+}</code></pre>
+    <p><strong>声纹注册（录入“我”的声音）</strong>：</p>
+    <pre><code>let mySpeaker = Speaker(name: "我")
+// 提取声纹嵌入（具体 API 可参考 FluidAudio 文档）
+// 后续识别时，匹配到的声音会被标记为 "我"</code></pre>
+    <blockquote><strong>注意</strong>：FluidAudio 提供 <code>Sortformer</code>（稳定，最多4人）和 <code>LS-EEND</code>（复杂场景，最多10人）两种模型。对于输入法场景，推荐使用 <code>Sortformer</code> 以提高声纹识别的可靠性。</blockquote>
+
+    <h3>4.4 时间戳对齐与过滤</h3>
+    <p>将 <code>SpeechAnalyzer</code> 输出的文字片段（含 <code>audioTimeRange</code>）与 <code>FluidAudio</code> 输出的说话人片段（含起始时间）进行重叠度匹配，分配说话人 ID，然后只保留属于“我”的文本。</p>
+    <pre><code>func alignAndFilter(transcriptions: [TranscriptionSegment], speakerSegments: [SpeakerSegment]) -> String {
+    var myTexts: [String] = []
+    for trans in transcriptions {
+        // 找到与 trans.audioTimeRange 重叠时间最长的 speakerSegment
+        let best = speakerSegments.max(by: { a, b in
+            overlapDuration(trans.audioTimeRange, a.timeRange) &lt;
+            overlapDuration(trans.audioTimeRange, b.timeRange)
+        })
+        if let best = best, best.speakerId == "我" {
+            myTexts.append(trans.text)
+        }
+    }
+    return myTexts.joined()
+}</code></pre>
+
+    <h3>4.5 LLM 后处理（FoundationModels）</h3>
+    <p>利用 Apple Intelligence 的 <code>FoundationModels</code> 框架，在设备端对原始转写文本进行润色。</p>
+    <pre><code>import FoundationModels
+
+class TextPolisher {
+    private let session = LanguageModelSession()
+    
+    func polish(_ rawText: String) async throws -> String {
+        let prompt = """
+        你是一个文本润色助手。请对以下语音转写的原始文本进行润色：
+        1. 添加合适的标点符号
+        2. 去除口语化的填充词（如"嗯"、"那个"）
+        3. 纠正同音字错误
+        4. 将零散短句组织成流畅的书面语句
+
+        原始文本：\(rawText)
+
+        请只返回润色后的文本，不要添加任何额外说明。
+        """
+        let response = try await session.respond(to: prompt)
+        return response.content
+    }
+}</code></pre>
+    <blockquote><strong>注意</strong>：首次调用会有 2-3 秒的模型加载延迟，建议在 App 启动时预热（调用一次简单的请求）。</blockquote>
+
+    <h3>4.6 结果回调与上屏</h3>
+    <p>语音模块不直接处理文字上屏，而是通过委托或回调将最终文字传递给输入法主控制器，由输入法负责插入到当前光标位置。</p>
+    <pre><code>protocol VoiceInputDelegate: AnyObject {
+    func voiceInputDidFinish(with text: String)
+}
+
+class VoiceInputManager {
+    weak var delegate: VoiceInputDelegate?
+    
+    private func finishRecording() {
+        // ... 经过所有处理后得到最终文本 finalText
+        DispatchQueue.main.async {
+            self.delegate?.voiceInputDidFinish(with: finalText)
+        }
+    }
+}</code></pre>
+    <p>在输入法主控制器（例如 <code>InputController</code>）中实现该委托，并在回调中调用 <code>insertText:</code> 等方法上屏。</p>
+
+    <h3>4.7 全局热键（CGEventTap）</h3>
+    <p>使用 <code>CGEventTap</code> 监听全局按键（如 Fn+Space）来启动/停止录音。</p>
+    <pre><code>class HotKeyManager {
+    private var eventTap: CFMachPort?
+    
+    func startListening() {
+        let eventMask = (1 &lt;&lt; CGEventType.keyDown.rawValue)
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: CGEventMask(eventMask),
+            callback: { (proxy, type, event, refcon) -> Unmanaged&lt;CGEvent&gt;? in
+                // 判断按键组合是否为 Fn+Space
+                // 若匹配，触发录音开始/停止
+                return Unmanaged.passUnretained(event)
+            },
+            userInfo: nil
+        ) else { return }
+        eventTap = tap
+        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+    }
+}</code></pre>
+    <blockquote><strong>注意</strong>：<code>CGEventTap</code> 回调不在主线程，需通过 <code>DispatchQueue.main.async</code> 更新 UI 或触发动作。</blockquote>
+
+    <hr>
+
+    <h2>5. 集成开源库的步骤与潜在冲突解决</h2>
+    <p>本项目主要依赖的开源库是 <strong>FluidAudio</strong>（通过 SPM 引入），其余为系统框架。</p>
+
+    <h3>5.1 SPM 集成</h3>
+    <p>在项目根目录的 <code>Package.swift</code> 中添加：</p>
+    <pre><code>dependencies: [
+    .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.0.3")
+]</code></pre>
+
+    <h3>5.2 版本兼容性</h3>
+    <ul>
+        <li>FluidAudio 要求 <strong>macOS 14+</strong>，但我们已限制为 26+，因此无冲突。</li>
+        <li>FluidAudio 依赖 CoreML 和 Accelerate，均为系统自带。</li>
+        <li>如果输入法本身使用了其他音频处理库（如 AudioKit），需注意音频格式转换（FluidAudio 需要 16kHz 单声道 Float32），可通过 <code>AVAudioConverter</code> 转换。</li>
+    </ul>
+
+    <h3>5.3 代码签名与权限</h3>
+    <ul>
+        <li>应用必须使用有效开发者证书签名（或开发时用 <code>-</code> 临时签名）。</li>
+        <li><code>Info.plist</code> 必须包含：
+            <ul>
+                <li><code>NSMicrophoneUsageDescription</code></li>
+                <li><code>NSSpeechRecognitionUsageDescription</code></li>
+            </ul>
+        </li>
+        <li>如果使用全局热键，需要在系统设置中授予 <strong>辅助功能</strong> 权限（用于监听按键），但也可以选择使用输入法自带的热键（如通过 InputMethodKit 的菜单或快捷键设置），这样可避免额外权限。</li>
+    </ul>
+
+    <h3>5.4 沙盒限制</h3>
+    <ul>
+        <li>如果输入法运行在沙盒中，需要请求 <code>com.apple.security.device.audio-input</code> 权限。</li>
+        <li>若使用 <code>CGEventTap</code> 可能需要 <code>com.apple.security.automation.apple-events</code>，但建议优先使用输入法框架提供的快捷键机制，以减少权限依赖。</li>
+    </ul>
+
+    <h3>5.5 模型下载管理</h3>
+    <ul>
+        <li>FluidAudio 首次使用时会下载约 700MB 的 CoreML 模型，应提供进度指示。</li>
+        <li>SpeechAnalyzer 和 FoundationModels 的模型由系统自动管理（通过 <code>AssetInventory</code>），无需额外代码。</li>
+    </ul>
+
+    <h3>5.6 多开源项目参考</h3>
+    <p>如果需要参考完整实现，可以借鉴以下开源项目（MIT 或类似宽松协议），它们均展示了如何整合这些技术：</p>
+    <ul>
+        <li><strong>ambient-voice</strong>：完整菜单栏应用，含音频捕获、SpeechAnalyzer、FluidAudio 和屏幕上下文。</li>
+        <li><strong>TranscriberKit</strong>：封装了转录+分离逻辑的 Swift 库，使用 Actor 并发。</li>
+        <li><strong>Megaphone</strong>：集成 FoundationModels 做后处理的语音输入示例。</li>
+    </ul>
+    <blockquote><strong>注意</strong>：直接复制代码时注意遵守各自的许可证条款。</blockquote>
+
+    <hr>
+
+    <h2>6. 性能优化建议</h2>
+    <table>
+        <thead><tr><th>优化点</th><th>方法</th></tr></thead>
+        <tbody>
+            <tr><td>减少音频延迟</td><td>使用 <code>AVCaptureSession</code> 而非 <code>AVAudioEngine</code>，设置合适的音频缓冲区大小</td></tr>
+            <tr><td>降低 LLM 延迟</td><td>App 启动时预热 <code>LanguageModelSession</code>（发送一次简单请求）</td></tr>
+            <tr><td>减少内存占用</td><td>音频累积时使用 <code>[Float]</code> 而非 <code>CMSampleBuffer</code> 保留；及时释放不再需要的样本</td></tr>
+            <tr><td>提高过滤准确率</td><td>在录音结束后使用离线分离（而非流式），精度更高（DER ~15% vs 26%）</td></tr>
+            <tr><td>多线程</td><td>将音频捕获、转录、分离分别放在不同 DispatchQueue 或 Task 中，避免阻塞主线程</td></tr>
+        </tbody>
+    </table>
+
+    <h2>7. 测试与调试</h2>
+    <ul>
+        <li><strong>单元测试</strong>：可参考 <code>TranscriberKit</code> 的 73 个测试用例，覆盖音频转换、时间戳对齐等。</li>
+        <li><strong>模拟音频</strong>：使用预录制的 16kHz WAV 文件进行离线测试，避免重复语音输入。</li>
+        <li><strong>日志</strong>：开启 <code>OSLog</code> 记录关键步骤（启动、权限、错误），方便排查。</li>
+        <li><strong>真机调试</strong>：确保在真实 Mac（非虚拟机）上测试蓝牙麦克风等场景。</li>
+    </ul>
+
+    <h2>8. 参考开源项目</h2>
+    <table>
+        <thead><tr><th>项目</th><th>描述</th><th>地址</th></tr></thead>
+        <tbody>
+            <tr><td>ambient-voice</td><td>完整语音输入应用，含屏幕上下文</td><td>github.com/Marvinngg/ambient-voice</td></tr>
+            <tr><td>TranscriberKit</td><td>转录+分离 Swift 库，Actor 并发</td><td>github.com/glebis/TranscriberKit</td></tr>
+            <tr><td>AuralKit</td><td>SpeechAnalyzer 轻量封装</td><td>github.com/rryam/AuralKit</td></tr>
+            <tr><td>Megaphone</td><td>语音输入 + FoundationModels 润色</td><td>github.com/Kuberwastaken/megaphone</td></tr>
+            <tr><td>VoiceWrite</td><td>极简输入法，22 种语言</td><td>github.com/dorucioclea/voicewrite</td></tr>
+            <tr><td>FluidAudio 官方</td><td>官方仓库与示例</td><td>github.com/FluidInference/FluidAudio</td></tr>
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>9. 附录：启动项目的提示词（用于 AI 辅助开发）</h2>
+    <blockquote><strong>使用说明</strong>：将以下提示词复制给 AI 助手（如 ChatGPT / Claude / Copilot），即可让 AI 根据本开发文档开始编写代码。请根据实际项目结构调整文件路径和模块名称。</blockquote>
+
+    <p><strong>提示词（Prompt）</strong>：</p>
+    <pre><code>你是一位资深的 macOS Swift 开发者，专注于原生 API 和性能优化。  
+请根据以下要求，为我的 macOS 输入法项目实现一个完整的本地语音输入模块。
+
+**背景**：我的输入法基于 InputMethodKit，已拥有基础的文字输入功能。现在需要增加语音输入能力，所有处理必须在设备端离线完成。
+
+**需求清单**：
+1. 使用 AVCaptureSession 捕获麦克风音频，替代 AVAudioEngine.installTap（后者在蓝牙设备上不可靠）。
+2. 集成 SpeechAnalyzer（macOS 26+）实现实时语音转文字，支持中文，带时间戳输出。
+3. 集成 FluidAudio（SPM 包）实现说话人分离和声纹识别，注册一个名为“我”的说话人，录音结束后执行离线分离。
+4. 实现时间戳对齐逻辑，将转写文字片段分配给对应的说话人，仅保留属于“我”的文字。
+5. 使用 FoundationModels（LanguageModelSession）对保留的文本进行后处理：添加标点、去除口语词、纠正同音字、优化语句。
+6. 最终文字通过委托或回调传递给输入法主控制器，由输入法负责上屏（不需要模拟粘贴或剪贴板操作）。
+7. 添加启动/停止录音的触发方式（可使用全局热键或输入法内按钮），如果使用 CGEventTap 需注意线程问题。
+8. 处理所有必要的权限请求（麦克风、语音识别），并提供友好的错误提示。
+
+**技术约束**：
+- 最低系统：macOS 26 (Tahoe)，Apple Silicon。
+- 使用 Swift 6 并发（async/await，Actor）。
+- 依赖管理：Swift Package Manager。
+- 代码注释清晰，模块化，便于后续维护。
+
+**参考实现**：可以参考开源项目 ambient-voice 和 TranscriberKit 的设计思路，但请基于当前项目结构重新实现。
+
+请提供完整的 Swift 代码实现，包括必要的 import 语句、类定义、错误处理，并指出关键踩坑点（如蓝牙音频、模型下载、线程问题）。代码应可编译通过（假设 Xcode 16 环境）。
+
+最后，请给出如何将此语音模块集成到现有 InputMethodKit 输入法主程序中的具体建议（例如在 inputController 中持有管理器实例并实现委托）。</code></pre>
+
+    <hr>
+    <div class="footnote">
+        <p><strong>文档结束</strong> — 保存此 HTML 文件至本地，双击即可在浏览器中阅览。</p>
+    </div>
+
+</div>
+</body>
+</html>

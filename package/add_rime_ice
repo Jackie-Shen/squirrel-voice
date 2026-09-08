@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# 把雾凇拼音（rime-ice）整套词库/方案注入已构建的 Squirrel.app/Contents/SharedSupport。
+# 用法：add_rime_ice <derived-data-path> [configuration]   （默认 Release）
+#
+# 说明：rime-ice 依赖子目录（cn_dicts/ en_dicts/ lua/ opencc/），Xcode 的 Copy Files
+# 阶段只支持平铺文件，所以在构建完成后用 rsync 合并进 bundle。
+#
+
+set -e
+
+DERIVED_DATA_PATH=${1:-build}
+CONFIGURATION=${2:-Release}
+
+cd "$(dirname "$0")/.."
+
+SRC="data/rime-ice"
+DST="${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/Squirrel.app/Contents/SharedSupport"
+
+if [ ! -d "$SRC" ]; then
+    echo "错误：$SRC 不存在（雾凇词库未入库？）"
+    exit 1
+fi
+if [ ! -d "$DST" ]; then
+    echo "错误：$DST 不存在，请先执行 make ${CONFIGURATION,,}"
+    exit 1
+fi
+
+rsync -a "$SRC/" "$DST/"
+echo "已注入雾凇词库：$(du -sh "$SRC" | cut -f1) → $DST"

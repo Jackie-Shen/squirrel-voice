@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# 生成 SquirrelVoice DMG 安装包：卷内含 Squirrel.app + 安装/重装/卸载.command + 说明.txt。
+# 用法：make_dmg [derived-data-path]   （默认 build）
+# 产物：releases/SquirrelVoice-<版本号>.dmg（分发包统一输出到根目录 releases/，勿提交）
+#
+
+set -e
+
+DERIVED_DATA_PATH=${1:-build}
+
+cd "$(dirname "$0")"
+source common.sh
+
+APP="${PROJECT_ROOT}/${DERIVED_DATA_PATH}/Build/Products/Release/Squirrel.app"
+if [ ! -d "$APP" ]; then
+    echo "错误：$APP 不存在，请先执行 make release"
+    exit 1
+fi
+
+VERSION="$(get_app_version)"
+STAGE="${PROJECT_ROOT}/${DERIVED_DATA_PATH}/dmg-root"
+
+rm -rf "$STAGE"
+mkdir -p "$STAGE"
+
+cp -R "$APP" "$STAGE/Squirrel.app"
+cp "dmg/安装.command" "$STAGE/安装.command"
+cp "dmg/重装.command" "$STAGE/重装.command"
+cp "dmg/卸载.command" "$STAGE/卸载.command"
+cp "dmg/说明.txt" "$STAGE/说明.txt"
+chmod +x "$STAGE/安装.command" "$STAGE/重装.command" "$STAGE/卸载.command"
+
+# 清掉 quarantine，避免本机双击 .command 被 Gatekeeper 直接拦死
+xattr -dr com.apple.quarantine "$STAGE" 2>/dev/null || true
+
+OUT_DIR="${PROJECT_ROOT}/releases"
+mkdir -p "$OUT_DIR"
+OUT="${OUT_DIR}/SquirrelVoice-${VERSION}.dmg"
+rm -f "$OUT"
+hdiutil create \
+    -volname "SquirrelVoice ${VERSION}" \
+    -srcfolder "$STAGE" \
+    -format UDZO \
+    -ov "$OUT"
+
+echo "已生成 $OUT"

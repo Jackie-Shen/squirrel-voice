@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# 生成 Squirrel-Uninstaller.app（纯脚本 app，无需编译）。
+# 用法：make_uninstaller <输出目录> <版本号>
+# 输出：<输出目录>/Squirrel-Uninstaller.app
+#
+
+set -e
+
+OUT_DIR=$1
+VERSION=${2:-1.0.0}
+APP="$OUT_DIR/Squirrel-Uninstaller.app"
+
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS"
+
+cat > "$APP/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>uninstall</string>
+	<key>CFBundleIdentifier</key>
+	<string>im.rime.inputmethod.Squirrel.uninstaller</string>
+	<key>CFBundleName</key>
+	<string>Squirrel-Uninstaller</string>
+	<key>CFBundleDisplayName</key>
+	<string>卸载 Squirrel</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$VERSION</string>
+	<key>CFBundleVersion</key>
+	<string>$VERSION</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>
+EOF
+
+cat > "$APP/Contents/MacOS/uninstall" <<'UNINSTALL_EOF'
+#!/bin/bash
+# Squirrel 卸载器（GUI 由 osascript 提供）。由 package/make_uninstaller 生成。
+
+# ---------- 1. 确认 + 可选清理勾选（choose from list 多选） ----------
+CHOICE=$(osascript <<'APPLESCRIPT'
+set theItems to {"删除 ~/.squirrelvoice（声纹、API key、日志）", "删除 ~/Library/Rime（鼠须管词库与配置）"}
+set msg to "将删除：" & return & "• /Library/Input Methods/Squirrel.app" & return & "• /Applications/Squirrel.app" & return & return & "请勾选需要一并清理的用户数据："
+set theResult to choose from list theItems with title "卸载 Squirrel" with prompt msg OK button name "继续卸载" cancel button name "取消"
+if theResult is false then return "cancel|false|false"
+set cleanV to "false"
+set cleanR to "false"
+repeat with anItem in theResult
+    if anItem starts with "删除 ~/.squirrelvoice" then set cleanV to "true"
+    if anItem starts with "删除 ~/Library/Rime" then set cleanR to "true"
+end repeat
+return "ok|" & cleanV & "|" & cleanR
+APPLESCRIPT
+) || exit 0
+case "$CHOICE" in
+    cancel*) exit 0 ;;
+esac
+CLEAN_SQUIRRELVOICE=$(echo "$CHOICE" | cut -d'|' -f2)
+CLEAN_RIME=$(echo "$CHOICE" | cut -d'|' -f3)
+
+# ---------- 2. 管理员权限删除（一次授权弹窗） ----------
+PRIV_CMD='L=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister; killall Squirrel 2>/dev/null; rm -rf "/Library/Input Methods/Squirrel.app" "/Applications/Squirrel.app" "/Applications/Squirrel-Uninstaller.app"; "$L" -f /Applications; "$L" -f "/Library/Input Methods"; exit 0'
+osascript -e "do shell script \"$PRIV_CMD\" with administrator privileges and with prompt \"卸载 Squirrel 需要管理员权限\"" || {
+    osascript -e 'display alert "卸载未完成" message "已取消授权，未删除任何文件。"'
+    exit 1
+}
+
+# ---------- 3. 用户数据清理（无需管理员） ----------
+[ "$CLEAN_SQUIRRELVOICE" = "true" ] && rm -rf "$HOME/.squirrelvoice"
+[ "$CLEAN_RIME" = "true" ] && rm -rf "$HOME/Library/Rime"
+
+# ---------- 4. 完成提示 ----------
+osascript <<'APPLESCRIPT'
+set msg to "Squirrel 已删除。" & return & return & "• 若输入法列表仍有残留：系统设置 → 键盘 → 输入法，点「-」移除（通常会自动消失）" & return & "• 建议注销或重启一次，确保输入源与权限列表刷新" & return & "• 可选：系统设置 → 隐私与安全性，从 麦克风 / 语音识别 / 输入监控 中移除 Squirrel"
+display alert "卸载完成" message msg
+APPLESCRIPT
+UNINSTALL_EOF
+
+chmod +x "$APP/Contents/MacOS/uninstall"
+echo "已生成 $APP"

@@ -1,0 +1,52 @@
+SquirrelVoice —— Squirrel 语音输入 · 安装说明
+================================================
+（本文件随 DMG 打包，卷内自带；项目文档见仓库
+ https://github.com/Jackie-Shen/squirrel-voice 的 README.md / BUILD_AND_INSTALL.md）
+
+一、本卷内容
+------------
+  安装.command    首次安装（双击即在终端运行，全程无需管理员密码）
+  重装.command    升级 / 覆盖安装（保留配置、声纹、用户词库）
+  卸载.command    卸载（可选择是否一并清理用户数据）
+  Squirrel.app    输入法本体
+  说明.txt        本文件
+
+二、安装步骤
+------------
+  1. 双击「安装.command」。
+     若提示"来自身份不明的开发者"：右键（或 Control+点击）→ 打开 → 再点"打开"；
+     或执行：xattr -dr com.apple.quarantine /Volumes/挂载点路径
+  2. 等待词库预构建完成（雾凇拼音 rime-ice，约 1~3 分钟）。
+  3. 若输入法列表里找不到 Squirrel：注销一次再登录。
+  4. 系统设置 → 键盘 → 输入法 →「+」添加「鼠须管 - 简体中文」。
+  5. 授权（首次触发语音时系统也会自动弹窗）：
+       隐私与安全性 → 麦克风     勾选 Squirrel
+       隐私与安全性 → 语音识别   允许 Squirrel
+     不需要「输入监控」权限：热键由输入法内部监听，任何账号都能自行授权。
+
+三、使用方法
+------------
+  · 拼音输入：与鼠须管一致，F4（或 Ctrl+`）切换输入方案。
+  · 语音输入：焦点在任意输入框、当前输入法为 Squirrel 时——
+      按 option+`   开始说话（候选窗实时显示转写预览）
+      再按 option+` 结束并自动定稿（第 2 行显示"正在定稿…"）
+      Enter / 空格  提交上屏        Esc  丢弃
+    注意 cmd+` 被系统「切换窗口」占用，勿用；热键可在
+    输入法菜单 →「Settings...」中修改。
+  · 可选功能（同一设置窗口开启）：
+      说话人过滤   离线声纹，只保留"我"说的话（需先注册声纹：安静环境录 10s+）
+      LLM 清洗     云端口语→书面语润色；清洗期间按 Enter 可提前提交原文
+
+四、安装位置与数据目录
+--------------------
+  输入法本体   ~/Library/Input Methods/Squirrel.app（账号可写系统目录时自动优先系统目录）
+  应用副本     ~/Applications/Squirrel.app
+  用户数据     ~/.squirrelvoice/（声纹、API key、日志）
+  Rime 配置    ~/Library/Rime/（词库、用户设定，沿用上游机制）
+  排查日志     ~/.squirrelvoice/squirrel-voicenative.log
+
+五、卸载
+--------
+  双击「卸载.command」：停用输入源 → 删除 app；
+  可选择一并清理 ~/.squirrelvoice 与 ~/Library/Rime，并重置麦克风/语音识别授权记录。
+  卸载器同样能删 pkg 方式安装的副本（会提示管理员密码，可跳过只删用户级）。

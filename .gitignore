@@ -1,0 +1,27 @@
+Squirrel.xcodeproj/*.mode1v3
+Squirrel.xcodeproj/*.pbxuser
+Squirrel.xcodeproj/project.xcworkspace/
+Squirrel.xcodeproj/xcuserdata/
+# 构建产物（1.5G，本地 make release 重新生成）
+build/
+build.log
+# librime 源码 + 其构建产物（191M，bash action-install.sh 或 git clone 重新获取）
+librime/
+# 子模块源码目录（按需 git submodule update --init 获取；锚定根目录，不影响 data/plum/）
+/plum/
+/Sparkle/
+download/
+# 分发包产物目录（make_dmg 输出 SquirrelVoice-<版本>.dmg，走 GitHub Releases，勿提交）
+releases/
+package/Squirrel*.pkg
+package/SquirrelVoice-*.dmg
+package/sign/*.pem
+package/test-*
+package/generate_keys
+package/sign_update
+package/*.xml
+*~
+.*.swp
+.DS_Store
+# 注意：lib/ bin/ Frameworks/ data/plum/ data/opencc/ resources/models/ 是预构建依赖与模型
+# （合计约 50M），故意不忽略、随仓库提交，避免每次重新下载。

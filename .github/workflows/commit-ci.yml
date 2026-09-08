@@ -1,0 +1,45 @@
+name: commit ci
+on:
+  push:
+    branches:
+      - '*'
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - name: Set Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.5'
+
+      - name: Checkout last commit
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint
+        run: swiftlint
+
+      - name: Configure build environment
+        run: |
+          echo git_ref_name="$(git describe --always)" >> $GITHUB_ENV
+
+      - name: Build SquirrelVoice (DMG)
+        run: ./action-build.sh dmg
+
+      - name: Install periphery
+        run: brew install peripheryapp/periphery/periphery
+
+      - name: Check Unused Code
+        run: periphery scan --relative-results --skip-build --index-store-path build/Index.noindex/DataStore
+
+      - name: Upload SquirrelVoice artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: SquirrelVoice-${{ env.git_ref_name }}.dmg
+          path: releases/*.dmg
+          # keep 90 days
+          retention-days: 90

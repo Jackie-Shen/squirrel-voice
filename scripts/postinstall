@@ -1,0 +1,50 @@
+#!/bin/bash
+# Squirrel (SquirrelVoice) 安装后脚本（以 root 运行）
+#
+# 步骤：
+#   1. 停掉正在运行的 Squirrel
+#   2. TIS 注册输入源 + Rime 数据预构建
+#   3. 拷贝到 /Applications（macOS 26 TCC「输入监控」列表要求的位置）
+#   4. lsregister 双位置注册
+#   5. 以登录用户身份启用并选中输入源
+set -e
+
+login_user="$(/usr/bin/stat -f%Su /dev/console)"
+
+# pkg 安装位置固定为 /Library/Input Methods（见 package/make_package）；
+# DSTROOT 语义随 installer 版本有歧义，做防御性解析。
+if [ -n "${DSTROOT}" ] && [ -d "${DSTROOT}/Squirrel.app" ]; then
+    squirrel_app_root="${DSTROOT}/Squirrel.app"
+else
+    squirrel_app_root="/Library/Input Methods/Squirrel.app"
+fi
+squirrel_executable="${squirrel_app_root}/Contents/MacOS/Squirrel"
+rime_shared_data_path="${squirrel_app_root}/Contents/SharedSupport"
+lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
+
+/usr/bin/sudo -u "${login_user}" /usr/bin/killall Squirrel > /dev/null || true
+
+# TIS 注册（root）
+"${squirrel_executable}" --register-input-source
+
+# Rime 数据预构建（可用 RIME_NO_PREBUILD=1 跳过）
+if [ -z "${RIME_NO_PREBUILD}" ]; then
+    pushd "${rime_shared_data_path}" > /dev/null
+    "${squirrel_executable}" --build
+    popd > /dev/null
+fi
+
+# TCC 双位置：/Applications 副本（macOS 26 上 ad-hoc/自签 app 需在此才出现在输入监控列表）
+if [ -d /Applications/Squirrel.app ]; then
+    /usr/bin/killall Squirrel > /dev/null || true
+    /bin/rm -rf /Applications/Squirrel.app
+fi
+/bin/cp -R "${squirrel_app_root}" /Applications/Squirrel.app
+
+# 双位置 LaunchServices 注册
+"${lsregister}" -f "${squirrel_app_root}" || true
+"${lsregister}" -f /Applications/Squirrel.app || true
+
+# 以登录用户启用并选中输入源
+/usr/bin/sudo -u "${login_user}" "${squirrel_executable}" --enable-input-source
+/usr/bin/sudo -u "${login_user}" "${squirrel_executable}" --select-input-source
